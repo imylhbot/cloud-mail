@@ -1,0 +1,22 @@
+{
+  "project": "imylhbot/cloud-mail",
+  "strategy": "KV-based push config; no D1 schema migration",
+  "modified_files": [
+    "mail-worker/src/email/email.js",
+    "mail-worker/src/hono/webs.js",
+    "mail-worker/src/security/security.js",
+    "mail-vue/src/router/index.js"
+  ],
+  "new_features": [
+    "Telegram",
+    "Discord",
+    "WeCom",
+    "Feishu",
+    "DingTalk",
+    "Bark",
+    "ServerChan",
+    "PushPlus",
+    "Webhook",
+    "Mail API"
+  ]
+}

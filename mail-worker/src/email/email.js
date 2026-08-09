@@ -11,6 +11,7 @@ import roleService from '../service/role-service';
 import userService from '../service/user-service';
 import telegramService from '../service/telegram-service';
 import aiService from '../service/ai-service';
+import pushService from '../service/push-service';
 
 export async function email(message, env, ctx) {
 
@@ -40,7 +41,6 @@ export async function email(message, env, ctx) {
 
 		const reader = message.raw.getReader();
 		let content = '';
-
 		while (true) {
 			const { done, value } = await reader.read();
 			if (done) break;
@@ -48,7 +48,6 @@ export async function email(message, env, ctx) {
 		}
 
 		const email = await PostalMime.parse(content);
-
 
 		const blockFlag = checkBlock(blackSubject, blackContent, blackFrom, email);
 
@@ -58,7 +57,6 @@ export async function email(message, env, ctx) {
 		}
 
 		const account = await accountService.selectByEmailIncludeDel({ env: env }, message.to);
-
 		if (!account && noRecipient === settingConst.noRecipient.CLOSE) {
 			message.setReject('Recipient not found');
 			return;
@@ -73,7 +71,6 @@ export async function email(message, env, ctx) {
 		if (account && userRow.email !== env.admin) {
 
 			let { banEmail, availDomain } = await roleService.selectByUserId({ env: env }, account.userId);
-
 			if (!roleService.hasAvailDomainPerm(availDomain, message.to)) {
 				message.setReject('The recipient is not authorized to use this domain.');
 				return;
@@ -86,14 +83,11 @@ export async function email(message, env, ctx) {
 
 		}
 
-
 		if (!email.to) {
 			email.to = [{ address: message.to, name: emailUtils.getName(message.to)}]
 		}
-
 		const toName = email.to.find(item => item.address === message.to)?.name || '';
 		const code = await aiService.extractCode({ env }, email, { aiCode, aiCodeFilter });
-
 		const params = {
 			toEmail: message.to,
 			toName: toName,
@@ -114,7 +108,6 @@ export async function email(message, env, ctx) {
 			isDel: isDel.DELETE,
 			status: emailConst.status.SAVING
 		};
-
 		const attachments = [];
 		const cidAttachments = [];
 
@@ -127,7 +120,6 @@ export async function email(message, env, ctx) {
 				cidAttachments.push(attachment);
 			}
 		}
-
 		let emailRow = await emailService.receive({ env }, params, cidAttachments, r2Domain);
 
 		attachments.forEach(attachment => {
@@ -144,8 +136,11 @@ export async function email(message, env, ctx) {
 			console.error(e);
 		}
 
-		emailRow = await emailService.completeReceive({ env }, account ? emailConst.status.RECEIVE : emailConst.status.NOONE, emailRow.emailId);
-
+		emailRow = await emailService.completeReceive(
+			{ env },
+			account ? emailConst.status.RECEIVE : emailConst.status.NOONE,
+			emailRow.emailId
+		);
 
 		if (ruleType === settingConst.ruleType.RULE) {
 
@@ -157,12 +152,20 @@ export async function email(message, env, ctx) {
 
 		}
 
-		//转发到TG
+		// 原有 Telegram 推送：保持不变
 		if (tgBotStatus === settingConst.tgBotStatus.OPEN && tgChatId) {
 			await telegramService.sendEmailToBot({ env }, emailRow)
 		}
 
-		//转发到其他邮箱
+		// 新增统一推送中心。
+		// 注意：内部使用 Promise.allSettled，任何第三方推送失败都不会影响邮件入库和原有功能。
+		try {
+			await pushService.pushEmail({ env }, emailRow);
+		} catch (e) {
+			console.error('推送中心异常（不影响收件）:', e);
+		}
+
+		// 原有邮箱转发：保持不变
 		if (forwardStatus === settingConst.forwardStatus.OPEN && forwardEmail) {
 
 			const emails = forwardEmail.split(',');
@@ -186,7 +189,6 @@ export async function email(message, env, ctx) {
 }
 
 function checkBlock(blackSubjectStr, blackContentStr, blackFromStr, email) {
-
 	const blackFromList = blackFromStr ? blackFromStr.split(',') : []
 	const blackContentList = blackContentStr ? blackContentStr.split(',') : []
 	const blackSubjectList = blackSubjectStr ? blackSubjectStr.split(',') : []
@@ -202,7 +204,6 @@ function checkBlock(blackSubjectStr, blackContentStr, blackFromStr, email) {
 			return true
 		}
 	}
-
 	for (const blackFrom of blackFromList) {
 		if (email.from.address === blackFrom || emailUtils.getDomain(email.from.address) === blackFrom) {
 			return true
@@ -210,5 +211,4 @@ function checkBlock(blackSubjectStr, blackContentStr, blackFromStr, email) {
 	}
 
 	return false
-
 }

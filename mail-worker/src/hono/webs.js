@@ -1,6 +1,5 @@
 import app from './hono';
 import '../security/security'
-
 import '../api/email-api';
 import '../api/user-api';
 import '../api/login-api';
@@ -20,4 +19,9 @@ import '../api/reg-key-api'
 import '../api/public-api'
 import '../api/telegram-api'
 import '../api/oauth-api'
+
+// 新增：多平台推送配置 + 独立邮件查询 API
+import '../api/push-api'
+import '../api/mail-api'
+
 export default app;

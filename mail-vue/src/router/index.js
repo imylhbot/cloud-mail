@@ -42,6 +42,16 @@ const routes = [
                 }
             },
             {
+                path: '/push-settings',
+                name: 'push-setting',
+                component: () => import('@/views/push-setting/index.vue'),
+                meta: {
+                    title: '推送中心',
+                    name: 'push-setting',
+                    menu: true
+                }
+            },
+            {
                 path: '/starred',
                 name: 'star',
                 component: () => import('@/views/star/index.vue'),
@@ -52,7 +62,6 @@ const routes = [
                 }
             },
         ]
-
     },
     {
         path: '/login',
@@ -71,16 +80,15 @@ const routes = [
     }
 ]
 
-
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes
 })
 
 NProgress.configure({
-    showSpinner: false,   // 不显示旋转图标
-    trickleSpeed: 50,    // 自动递增速度
-    minimum: 0.1          // 最小百分比
+    showSpinner: false,
+    trickleSpeed: 50,
+    minimum: 0.1
 });
 
 let timer
@@ -103,7 +111,6 @@ router.beforeEach((to, from, next) => {
     if (!token && to.name !== 'login') {
         return next({name: 'login'})
     }
-
     if (!token && to.name === 'login') {
         loadBackground(next)
         return
@@ -124,14 +131,12 @@ function loadBackground(next) {
     if (settingStore.settings.background) {
 
         const src = cvtR2Url(settingStore.settings.background);
-
         const img = new Image();
         img.src = src;
 
         img.onload = () => {
             next()
         };
-
         img.onerror = () => {
             console.warn("背景图片加载失败:", img.src);
             next()
@@ -151,6 +156,7 @@ function loadBackground(next) {
 router.afterEach((to) => {
 
     clearTimeout(timer)
+
     if (first) {
         removeLoading()
     } else {
@@ -158,6 +164,7 @@ router.afterEach((to) => {
     }
 
     const uiStore = useUiStore()
+
     if (to.meta.menu) {
         if (['content', 'email', 'send'].includes(to.meta.name)) {
             uiStore.accountShow = window.innerWidth > 767;
@@ -178,7 +185,6 @@ function removeLoading() {
     if (!doc) {
         return;
     }
-
     doc.remove()
 }
 

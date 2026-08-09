@@ -18,7 +18,10 @@ const exclude = [
 	'/public/genToken',
 	'/telegram',
 	'/test',
-	'/oauth'
+	'/oauth',
+
+	// mail-api 使用独立 x-api-key / Bearer Key 校验，由 mail-api.js 自己完成鉴权。
+	'/mail-api'
 ];
 
 const requirePerms = [
@@ -44,6 +47,12 @@ const requirePerms = [
 	'/setting/set',
 	'/setting/query',
 	'/setting/setBlacklist',
+
+	// 推送配置只允许拥有 setting:set 权限或管理员访问
+	'/push/config',
+	'/push/test',
+	'/push/apiKey',
+
 	'/user/delete',
 	'/user/setPwd',
 	'/user/setStatus',
@@ -82,7 +91,15 @@ const premKey = {
 	'all-email:query': ['/allEmail/list','/allEmail/latest'],
 	'all-email:delete': ['/allEmail/delete','/allEmail/batchDelete'],
 	'setting:query': ['/setting/query'],
-	'setting:set': ['/setting/set', '/setting/setBackground','/setting/deleteBackground','/setting/setBlacklist'],
+	'setting:set': [
+		'/setting/set',
+		'/setting/setBackground',
+		'/setting/deleteBackground',
+		'/setting/setBlacklist',
+		'/push/config',
+		'/push/test',
+		'/push/apiKey'
+	],
 	'analysis:query': ['/analysis/echarts'],
 	'reg-key:add': ['/regKey/add'],
 	'reg-key:query': ['/regKey/list','/regKey/history'],
@@ -110,7 +127,6 @@ app.use('*', async (c, next) => {
 		}
 		return await next();
 	}
-
 
 	const jwt = c.req.header(constant.TOKEN_HEADER);
 
@@ -168,7 +184,6 @@ app.use('*', async (c, next) => {
 function permKeyToPaths(permKeys) {
 
 	const paths = [];
-
 	for (const key of permKeys) {
 		const routeList = premKey[key];
 		if (routeList && Array.isArray(routeList)) {
