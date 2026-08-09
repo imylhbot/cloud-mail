@@ -46,6 +46,10 @@
           <Icon icon="si:user-alt-2-line" width="20" height="20" />
           <span class="menu-name" style="margin-left: 21px">{{$t('allUsers')}}</span>
         </el-menu-item>
+        <el-menu-item @click="batchImportShow = true" index="batch-user-import" v-perm="'user:add'">
+          <Icon icon="material-symbols:playlist-add" width="21" height="21" />
+          <span class="menu-name" style="margin-left: 20px">批量导入账号</span>
+        </el-menu-item>
         <el-menu-item @click="router.push({name: 'all-email'})" index="all-email" v-perm="'all-email:query'"
                       :class="route.meta.name === 'all-email' ? 'choose-item' : ''">
           <Icon icon="fluent:mail-list-28-regular" width="22" height="22" />
@@ -76,6 +80,11 @@
       </el-menu>
     </div>
   </el-scrollbar>
+
+  <BatchUserImport
+    v-model="batchImportShow"
+    @created="onBatchCreated"
+  />
 </template>
 
 <script setup>
@@ -83,9 +92,17 @@ import router from "@/router/index.js";
 import { useRoute } from "vue-router";
 import {Icon} from "@iconify/vue";
 import {useSettingStore} from "@/store/setting.js";
+import {ref} from "vue";
+import BatchUserImport from "@/components/batch-user-import/index.vue";
 
 const settingStore = useSettingStore();
 const route = useRoute();
+const batchImportShow = ref(false);
+
+function onBatchCreated() {
+  // 批量创建完成后关闭弹窗；进入“所有用户”即可看到新账号。
+  batchImportShow.value = false;
+}
 </script>
 
 <style lang="scss" scoped>

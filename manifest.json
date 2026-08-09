@@ -1,16 +1,23 @@
 {
-  "version": "3",
-  "features": [
-    "internal Hono mail API tester via app.request",
-    "external HTTP tester retained",
-    "unread extraction API",
-    "max 10 unread per extraction",
-    "optional mark-as-read after extraction",
-    "atomic unread claim using D1 UPDATE...RETURNING",
-    "no D1 migration"
+  "version": "4",
+  "base": "cloud-mail-push-center-v3",
+  "new_feature": "batch user account import",
+  "max_batch": 200,
+  "supported_examples": [
+    "账号: user@example.com | 密码: password",
+    "user@example.com|password",
+    "user@example.com,password",
+    "user@example.com;password",
+    "user@example.com password"
   ],
-  "unread_endpoints": [
-    "GET /api/mail-api/unread/:address",
-    "POST /api/mail-api/unread/:address"
+  "new_files": [
+    "mail-worker/src/service/user-batch-service.js",
+    "mail-vue/src/request/user-batch.js",
+    "mail-vue/src/components/batch-user-import/index.vue"
+  ],
+  "modified_files": [
+    "mail-worker/src/api/user-api.js",
+    "mail-worker/src/security/security.js",
+    "mail-vue/src/layout/aside/index.vue"
   ]
 }
