@@ -19,3 +19,7 @@ export function regenerateMailApiKey() {
 export function apiTesterRequest(data) {
 	return http.post('/push/api-tester/request', data);
 }
+
+export function internalApiTesterRequest(data) {
+	return http.post('/push/api-tester/internal', data);
+}

@@ -46,7 +46,10 @@ const pushConst = {
 		},
 		api: {
 			enabled: true,
-			key: ''
+			key: '',
+			unreadExtractEnabled: false,
+			unreadLimit: 10,
+			markReadAfterExtract: true
 		}
 	}
 };

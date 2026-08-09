@@ -25,8 +25,74 @@ app.post('/push/apiKey/regenerate', async (c) => {
 	return c.json(result.ok({ key }));
 });
 
-// 后端直接发起 GET/POST，用来测试 API / Webhook，避免浏览器 CORS 干扰。
+// 外部 HTTP 测试：真实 fetch 到公网 URL
 app.post('/push/api-tester/request', async (c) => {
 	const data = await apiTestService.request(c, await c.req.json());
 	return c.json(result.ok(data));
+});
+
+// 内部 Hono 路由测试：不经过公网、Cloudflare DNS、Nginx。
+// 用于测试当前 Worker 自己的 /mail-api/* 路由。
+app.post('/push/api-tester/internal', async (c) => {
+	const params = await c.req.json();
+	let path = String(params.path || '').trim();
+	const method = String(params.method || 'GET').toUpperCase();
+
+	if (!['GET', 'POST'].includes(method)) {
+		return c.json(result.fail('仅支持 GET/POST', 400));
+	}
+
+	if (!path.startsWith('/')) {
+		path = '/' + path;
+	}
+
+	// 公网路径 /api/... 在 src/index.js 会被去掉 /api；
+	// app.request() 直接走 Hono，因此这里也去掉一次。
+	if (path.startsWith('/api/')) {
+		path = path.slice(4);
+	}
+
+	if (!path.startsWith('/mail-api/')) {
+		return c.json(result.fail('内部测试只允许 /mail-api/*', 400));
+	}
+
+	const headers = new Headers();
+	for (const [key, value] of Object.entries(params.headers || {})) {
+		if (value !== undefined && value !== null) {
+			headers.set(String(key), String(value));
+		}
+	}
+
+	const init = { method, headers };
+
+	if (method === 'POST' && params.body !== undefined && params.body !== null && params.body !== '') {
+		if (typeof params.body === 'string') {
+			init.body = params.body;
+		} else {
+			if (!headers.has('Content-Type')) {
+				headers.set('Content-Type', 'application/json;charset=UTF-8');
+			}
+			init.body = JSON.stringify(params.body);
+		}
+	}
+
+	const started = Date.now();
+	const response = await app.request(path, init, c.env);
+	const text = await response.text();
+
+	const responseHeaders = {};
+	response.headers.forEach((value, key) => {
+		responseHeaders[key] = value;
+	});
+
+	return c.json(result.ok({
+		ok: response.ok,
+		status: response.status,
+		statusText: response.statusText,
+		elapsedMs: Date.now() - started,
+		headers: responseHeaders,
+		body: text,
+		internal: true,
+		path
+	}));
 });

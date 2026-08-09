@@ -5,7 +5,7 @@ import pushConst from '../const/push-const';
 import mailApiService from '../service/mail-api-service';
 import BizError from '../error/biz-error';
 
-async function auth(c) {
+export async function authMailApi(c) {
 	const config = await pushConfigService.get(c);
 
 	if (!config.api?.enabled) {
@@ -19,6 +19,8 @@ async function auth(c) {
 	if (!expected || !actual || actual !== expected) {
 		throw new BizError('Invalid API key', 401);
 	}
+
+	return config;
 }
 
 async function optionalJson(c) {
@@ -31,16 +33,46 @@ async function optionalJson(c) {
 	}
 }
 
-// 原有：高级列表查询
+async function unreadExtract(c, address) {
+	const config = await authMailApi(c);
+
+	if (!config.api?.unreadExtractEnabled) {
+		throw new BizError('Unread extraction disabled', 403);
+	}
+
+	const limit = Math.min(10, Math.max(1, Number(config.api?.unreadLimit) || 10));
+
+	const data = config.api?.markReadAfterExtract === false
+		? await mailApiService.unreadList(c, address, limit)
+		: await mailApiService.consumeUnread(c, address, limit);
+
+	return c.json(result.ok({
+		mailbox: decodeURIComponent(address),
+		count: data.length,
+		markReadAfterExtract: config.api?.markReadAfterExtract !== false,
+		list: data
+	}));
+}
+
+// 高级列表查询
 app.post('/mail-api/list', async (c) => {
-	await auth(c);
+	await authMailApi(c);
 	const data = await mailApiService.list(c, await optionalJson(c));
 	return c.json(result.ok(data));
 });
 
-// 明确的邮箱路径，GET/POST 均可
+// 未读邮件消费接口：最多 10 条，由后台配置决定是否提取后标已读
+app.get('/mail-api/unread/:address', async (c) => {
+	return unreadExtract(c, c.req.param('address'));
+});
+
+app.post('/mail-api/unread/:address', async (c) => {
+	return unreadExtract(c, c.req.param('address'));
+});
+
+// 明确 mailbox 路径
 app.get('/mail-api/mailbox/:address', async (c) => {
-	await auth(c);
+	await authMailApi(c);
 	const data = await mailApiService.mailbox(c, c.req.param('address'), {
 		page: c.req.query('page'),
 		size: c.req.query('size'),
@@ -50,18 +82,15 @@ app.get('/mail-api/mailbox/:address', async (c) => {
 });
 
 app.post('/mail-api/mailbox/:address', async (c) => {
-	await auth(c);
+	await authMailApi(c);
 	const body = await optionalJson(c);
 	const data = await mailApiService.mailbox(c, c.req.param('address'), body);
 	return c.json(result.ok(data));
 });
 
-// 兼容你期望的形式：
-// GET  /api/mail-api/lucky%40git.192911.xyz
-// POST /api/mail-api/lucky%40git.192911.xyz
-// POST 可以 Content-Length: 0，不要求 body。
+// 简写：邮箱地址直接作为 path
 app.get('/mail-api/:target', async (c) => {
-	await auth(c);
+	await authMailApi(c);
 	const target = decodeURIComponent(c.req.param('target'));
 
 	if (target.includes('@')) {
@@ -82,7 +111,7 @@ app.get('/mail-api/:target', async (c) => {
 });
 
 app.post('/mail-api/:target', async (c) => {
-	await auth(c);
+	await authMailApi(c);
 	const target = decodeURIComponent(c.req.param('target'));
 
 	if (!target.includes('@')) {

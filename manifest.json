@@ -1,17 +1,16 @@
 {
-  "version": "2",
-  "project": "imylhbot/cloud-mail",
-  "fixes": [
-    "direct GET/POST mailbox API",
-    "sidebar push-center entry",
-    "independent provider switches",
-    "provider test buttons",
-    "server-side GET/POST API tester",
-    "frontend Axios return-value fix"
+  "version": "3",
+  "features": [
+    "internal Hono mail API tester via app.request",
+    "external HTTP tester retained",
+    "unread extraction API",
+    "max 10 unread per extraction",
+    "optional mark-as-read after extraction",
+    "atomic unread claim using D1 UPDATE...RETURNING",
+    "no D1 migration"
   ],
-  "mail_api_examples": [
-    "GET /api/mail-api/lucky%40git.192911.xyz",
-    "POST /api/mail-api/lucky%40git.192911.xyz",
-    "POST /api/mail-api/list"
+  "unread_endpoints": [
+    "GET /api/mail-api/unread/:address",
+    "POST /api/mail-api/unread/:address"
   ]
 }
