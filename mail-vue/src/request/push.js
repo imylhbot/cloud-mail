@@ -15,3 +15,7 @@ export function testPush(provider) {
 export function regenerateMailApiKey() {
 	return http.post('/push/apiKey/regenerate');
 }
+
+export function apiTesterRequest(data) {
+	return http.post('/push/api-tester/request', data);
+}

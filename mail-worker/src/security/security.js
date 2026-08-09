@@ -52,6 +52,7 @@ const requirePerms = [
 	'/push/config',
 	'/push/test',
 	'/push/apiKey',
+	'/push/api-tester',
 
 	'/user/delete',
 	'/user/setPwd',
@@ -98,7 +99,8 @@ const premKey = {
 		'/setting/setBlacklist',
 		'/push/config',
 		'/push/test',
-		'/push/apiKey'
+		'/push/apiKey',
+		'/push/api-tester'
 	],
 	'analysis:query': ['/analysis/echarts'],
 	'reg-key:add': ['/regKey/add'],

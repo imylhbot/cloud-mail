@@ -31,15 +31,17 @@
           <Icon icon="fluent:settings-48-regular" width="20" height="20" />
           <span class="menu-name" style="margin-left: 21px">{{$t('settings')}}</span>
         </el-menu-item>
+
         <div class="manage-title" v-perm="['all-email:query','user:query','role:query','setting:query','analysis:query','reg-key:query']">
           <div>{{$t('manage')}}</div>
         </div>
+
         <el-menu-item @click="router.push({name: 'analysis'})" index="analysis" v-perm="'analysis:query'"
                       :class="route.meta.name === 'analysis' ? 'choose-item' : ''">
           <Icon icon="fluent:data-pie-20-regular" width="24" height="24" />
           <span class="menu-name" style="margin-left: 18px">{{$t('analytics')}}</span>
         </el-menu-item>
-        <el-menu-item @click="router.push({name: 'user'})" index="setting" v-perm="'user:query'"
+        <el-menu-item @click="router.push({name: 'user'})" index="user" v-perm="'user:query'"
                       :class="route.meta.name === 'user' ? 'choose-item' : ''">
           <Icon icon="si:user-alt-2-line" width="20" height="20" />
           <span class="menu-name" style="margin-left: 21px">{{$t('allUsers')}}</span>
@@ -49,7 +51,7 @@
           <Icon icon="fluent:mail-list-28-regular" width="22" height="22" />
           <span class="menu-name" style="margin-left: 20px">{{$t('allMail')}}</span>
         </el-menu-item>
-        <el-menu-item @click="router.push({name: 'role'})" index="setting" v-perm="'role:query'"
+        <el-menu-item @click="router.push({name: 'role'})" index="role" v-perm="'role:query'"
                       :class="route.meta.name === 'role' ? 'choose-item' : ''">
           <Icon icon="fluent:lock-closed-16-regular" width="22" height="22" />
           <span class="menu-name" style="margin-left: 20px">{{$t('permissions')}}</span>
@@ -64,6 +66,13 @@
           <Icon icon="eos-icons:system-ok-outlined" width="18" height="18" style="margin-left: 2px" />
           <span class="menu-name" style="margin-left: 22px">{{$t('SystemSettings')}}</span>
         </el-menu-item>
+
+        <!-- 新增：和注册密钥 / 系统设置同一管理区 -->
+        <el-menu-item @click="router.push({name: 'push-setting'})" index="push-setting" v-perm="'setting:query'"
+                      :class="route.meta.name === 'push-setting' ? 'choose-item' : ''">
+          <Icon icon="mdi:bell-cog-outline" width="20" height="20" />
+          <span class="menu-name" style="margin-left: 21px">推送中心</span>
+        </el-menu-item>
       </el-menu>
     </div>
   </el-scrollbar>
@@ -77,11 +86,9 @@ import {useSettingStore} from "@/store/setting.js";
 
 const settingStore = useSettingStore();
 const route = useRoute();
-
 </script>
 
 <style lang="scss" scoped>
-
 .title {
   margin: 15px 10px;
   height: 45px;
@@ -104,7 +111,6 @@ const route = useRoute();
     text-overflow: ellipsis;
     max-width: calc(240px - 20px - 30px);
   }
-
   :deep(.el-icon) {
     flex-shrink: 0;
     font-size: 20px;
@@ -117,9 +123,7 @@ const route = useRoute();
     right: 8px;
     color: #ffffff;
   }
-
 }
-
 
 .manage-title {
   margin-top: 10px;
@@ -133,7 +137,6 @@ const route = useRoute();
   height: 36px;
   padding: 10px !important;
 }
-
 .choose-item {
   font-weight: bold;
   background: rgba(255, 255, 255, 0.08) !important;
@@ -150,7 +153,6 @@ const route = useRoute();
   user-select: none;
 }
 
-
 :deep(.el-scrollbar__wrap--hidden-default ) {
   background: var(--aside-backgound) !important;
 }
@@ -162,7 +164,6 @@ const route = useRoute();
 :deep(.el-menu) {
   background: var(--aside-backgound);
 }
-
 .el-menu {
   border-right: 0;
   width: 260px;
@@ -171,9 +172,5 @@ const route = useRoute();
 :deep(.el-divider__text) {
   background: var(--aside-backgound);
   color: #FFFFFF;
-}
-
-.scroll {
-
 }
 </style>

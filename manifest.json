@@ -1,22 +1,17 @@
 {
+  "version": "2",
   "project": "imylhbot/cloud-mail",
-  "strategy": "KV-based push config; no D1 schema migration",
-  "modified_files": [
-    "mail-worker/src/email/email.js",
-    "mail-worker/src/hono/webs.js",
-    "mail-worker/src/security/security.js",
-    "mail-vue/src/router/index.js"
+  "fixes": [
+    "direct GET/POST mailbox API",
+    "sidebar push-center entry",
+    "independent provider switches",
+    "provider test buttons",
+    "server-side GET/POST API tester",
+    "frontend Axios return-value fix"
   ],
-  "new_features": [
-    "Telegram",
-    "Discord",
-    "WeCom",
-    "Feishu",
-    "DingTalk",
-    "Bark",
-    "ServerChan",
-    "PushPlus",
-    "Webhook",
-    "Mail API"
+  "mail_api_examples": [
+    "GET /api/mail-api/lucky%40git.192911.xyz",
+    "POST /api/mail-api/lucky%40git.192911.xyz",
+    "POST /api/mail-api/list"
   ]
 }
