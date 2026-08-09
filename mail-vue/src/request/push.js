@@ -23,3 +23,8 @@ export function apiTesterRequest(data) {
 export function internalApiTesterRequest(data) {
 	return http.post('/push/api-tester/internal', data);
 }
+
+
+export function revealMailApiKey() {
+	return http.get('/push/apiKey/reveal');
+}

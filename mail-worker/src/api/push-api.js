@@ -20,6 +20,17 @@ app.post('/push/test/:provider', async (c) => {
 	return c.json(result.ok(data));
 });
 
+
+app.get('/push/apiKey/reveal', async (c) => {
+	const config = await pushConfigService.get(c);
+	return c.json(result.ok({
+		enabled: config.api?.enabled !== false,
+		key: config.api?.key || '',
+		scope: 'global',
+		description: '全局 Mail API Key：对所有邮箱地址通用'
+	}));
+});
+
 app.post('/push/apiKey/regenerate', async (c) => {
 	const key = await pushConfigService.generateApiKey(c);
 	return c.json(result.ok({ key }));

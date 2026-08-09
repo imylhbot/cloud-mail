@@ -1,23 +1,17 @@
 {
-  "version": "4",
-  "base": "cloud-mail-push-center-v3",
-  "new_feature": "batch user account import",
-  "max_batch": 200,
-  "supported_examples": [
-    "账号: user@example.com | 密码: password",
-    "user@example.com|password",
-    "user@example.com,password",
-    "user@example.com;password",
-    "user@example.com password"
+  "version": "5",
+  "base": "cloud-mail-push-center-v4",
+  "changes": [
+    "batch import moved from sidebar dialog to /batch-users full page",
+    "sidebar now only navigates to batch page",
+    "global Mail API key made explicit in UI",
+    "admin reveal/copy endpoint for complete global API key",
+    "same global key works for every mailbox"
   ],
-  "new_files": [
-    "mail-worker/src/service/user-batch-service.js",
-    "mail-vue/src/request/user-batch.js",
-    "mail-vue/src/components/batch-user-import/index.vue"
-  ],
-  "modified_files": [
-    "mail-worker/src/api/user-api.js",
-    "mail-worker/src/security/security.js",
-    "mail-vue/src/layout/aside/index.vue"
-  ]
+  "new_route": "/batch-users",
+  "global_api_key": {
+    "storage": "Cloudflare KV PUSH_CONFIG_V1.api.key",
+    "scope": "all mailboxes",
+    "per_user_key_required": false
+  }
 }

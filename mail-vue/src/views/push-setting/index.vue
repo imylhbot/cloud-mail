@@ -92,8 +92,8 @@
     <el-card shadow="never" class="block">
       <div class="row-head">
         <div>
-          <div class="channel-title">邮件查询 API</div>
-          <div class="desc">普通查询不会修改邮件状态。</div>
+          <div class="channel-title">全局邮件查询 API</div>
+          <div class="desc">一个全局 Key 对所有邮箱通用；普通邮箱用户无需登录后台、无需单独创建 Key。</div>
         </div>
         <div class="channel-actions">
           <span class="switch-label">{{ form.api.enabled ? '已开启' : '已关闭' }}</span>
@@ -102,12 +102,28 @@
       </div>
 
       <el-form label-position="top">
-        <el-form-item label="API Key">
+        <el-alert
+          type="success"
+          :closable="false"
+          show-icon
+          class="api-alert"
+          title="这是全局统一 API Key：创建 10 个、100 个或更多邮箱账号，都使用同一个 Key 调用 Mail API。"
+        />
+
+        <el-form-item label="全局 Mail API Key（所有邮箱通用）">
           <div class="inline">
-            <el-input v-model="form.api.key" show-password />
-            <el-button @click="regenKey">重新生成</el-button>
+            <el-input v-model="globalApiKeyDisplay" readonly show-password />
+            <el-button @click="revealGlobalKey">显示完整 Key</el-button>
+            <el-button :disabled="!fullGlobalKey" @click="copyGlobalKey">复制 Key</el-button>
+            <el-button type="warning" @click="regenKey">重新生成</el-button>
           </div>
         </el-form-item>
+
+        <div class="global-key-note">
+          <b>调用规则：</b>
+          Key 不绑定具体邮箱。请求哪个邮箱，就把邮箱地址写进 URL/请求参数；请求头始终使用同一个
+          <code>x-api-key</code>。
+        </div>
 
         <el-divider content-position="left">未读邮件提取</el-divider>
 
@@ -138,13 +154,16 @@
         </el-form-item>
 
         <el-form-item label="调用示例">
-          <pre class="code"># 普通查询，不改变已读状态
-GET /api/mail-api/lucky%40git.192911.xyz
-x-api-key: YOUR_API_KEY
+          <pre class="code"># 全局 Key 查询任意邮箱，不改变已读状态
+GET /api/mail-api/account1%40git.192911.xyz
+x-api-key: GLOBAL_API_KEY
 
-# 提取最近最多 10 条未读
-GET /api/mail-api/unread/lucky%40git.192911.xyz
-x-api-key: YOUR_API_KEY
+GET /api/mail-api/account2%40git.192911.xyz
+x-api-key: GLOBAL_API_KEY
+
+# 同一个 Key 提取任意邮箱最近最多 10 条未读
+GET /api/mail-api/unread/account1%40git.192911.xyz
+x-api-key: GLOBAL_API_KEY
 
 # POST 也支持
 POST /api/mail-api/unread/lucky%40git.192911.xyz
@@ -238,13 +257,14 @@ Content-Length: 0</pre>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import {
   getPushConfig,
   setPushConfig,
   testPush,
   regenerateMailApiKey,
+  revealMailApiKey,
   apiTesterRequest,
   internalApiTesterRequest
 } from '@/request/push.js';
@@ -255,6 +275,7 @@ const testingInternal = ref(false);
 const testerResult = ref(null);
 const internalResult = ref(null);
 const quickMailbox = ref('lucky@git.192911.xyz');
+const fullGlobalKey = ref('');
 
 const channels = [
   { key: 'telegram', title: 'Telegram', desc: 'Telegram Bot 推送' },
@@ -292,6 +313,10 @@ function emptyConfig() {
 
 const form = reactive(emptyConfig());
 const headersText = ref('{}');
+
+const globalApiKeyDisplay = computed(() => {
+  return fullGlobalKey.value || form.api.key || '';
+});
 
 const tester = reactive({
   method: 'GET',
@@ -343,12 +368,35 @@ async function testProvider(provider) {
   }
 }
 
+async function revealGlobalKey() {
+  try {
+    const data = await revealMailApiKey();
+    fullGlobalKey.value = data?.key || '';
+    if (!fullGlobalKey.value) {
+      ElMessage.warning('还没有全局 API Key，请先生成');
+    }
+  } catch (e) {
+    ElMessage.error(e?.message || '读取全局 Key 失败');
+  }
+}
+
+async function copyGlobalKey() {
+  if (!fullGlobalKey.value) return;
+  try {
+    await navigator.clipboard.writeText(fullGlobalKey.value);
+    ElMessage.success('全局 API Key 已复制');
+  } catch {
+    ElMessage.error('复制失败，请手动复制');
+  }
+}
+
 async function regenKey() {
   try {
     const data = await regenerateMailApiKey();
     if (data?.key) {
+      fullGlobalKey.value = data.key;
       form.api.key = data.key;
-      ElMessage.success('API Key 已生成');
+      ElMessage.success('全局 API Key 已重新生成，旧 Key 已失效');
     }
   } catch (e) {
     ElMessage.error(e?.message || '生成失败');
@@ -361,8 +409,9 @@ function encodeMailbox() {
 
 function syncInternalKey() {
   // 如果界面里是明文 key，自动带入测试器；若是掩码则保留用户自己输入的 header。
-  if (form.api.key && !form.api.key.endsWith('******')) {
-    internalTester.headersText = JSON.stringify({ 'x-api-key': form.api.key }, null, 2);
+  const key = fullGlobalKey.value || form.api.key;
+  if (key && !key.endsWith('******')) {
+    internalTester.headersText = JSON.stringify({ 'x-api-key': key }, null, 2);
   }
 }
 
@@ -447,6 +496,20 @@ onMounted(load);
 .inline { width: 100%; gap: 10px; }
 .feature-row { padding: 10px 0; border-bottom: 1px solid var(--el-border-color-lighter); margin-bottom: 12px; }
 .hint { margin-left: 10px; font-size: 12px; }
+.api-alert { margin-bottom: 14px; }
+.global-key-note {
+  margin: -2px 0 18px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-regular);
+  line-height: 1.6;
+}
+.global-key-note code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--el-fill-color);
+}
 .quick-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .code { width: 100%; box-sizing: border-box; white-space: pre-wrap; word-break: break-word; background: var(--el-fill-color-light); border-radius: 8px; padding: 12px; line-height: 1.55; overflow: auto; }
 .result { margin-top: 16px; }

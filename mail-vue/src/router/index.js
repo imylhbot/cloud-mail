@@ -51,6 +51,17 @@ const routes = [
                     menu: true
                 }
             },
+
+            {
+                path: '/batch-users',
+                name: 'batch-user',
+                component: () => import('@/views/batch-user/index.vue'),
+                meta: {
+                    title: '批量导入账号',
+                    name: 'batch-user',
+                    menu: true
+                }
+            },
             {
                 path: '/starred',
                 name: 'star',
