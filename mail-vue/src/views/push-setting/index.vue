@@ -168,7 +168,22 @@ x-api-key: GLOBAL_API_KEY
 # POST 也支持
 POST /api/mail-api/unread/lucky%40git.192911.xyz
 x-api-key: YOUR_API_KEY
-Content-Length: 0</pre>
+Content-Length: 0
+
+# 账号+密码直接取件（推荐 POST）
+POST /api/mail-api/auth/list
+Content-Type: application/json
+
+{"user":"lucky@git.192911.xyz","pass":"邮箱密码","page":1,"size":20}
+
+# GET 也支持，但密码会出现在 URL/日志中，不推荐
+GET /api/mail-api/auth/list?user=lucky%40git.192911.xyz&pass=邮箱密码
+
+# 账号+密码提取未读
+POST /api/mail-api/auth/unread
+Content-Type: application/x-www-form-urlencoded
+
+user=lucky%40git.192911.xyz&pass=邮箱密码</pre>
         </el-form-item>
       </el-form>
     </el-card>

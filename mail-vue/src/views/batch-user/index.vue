@@ -144,6 +144,21 @@ email: abc@example.com | password: Abc123!@"
         <el-table-column prop="reason" label="失败原因" min-width="260"/>
       </el-table>
 
+      <div class="credential-copy-box" v-if="resultData.successCount > 0">
+        <div>
+          <div class="copy-title">成功账号密码</div>
+          <div class="tip">只复制本次创建成功的账号；失败账号不会包含在内。</div>
+        </div>
+        <div class="actions">
+          <el-button type="success" @click="copySuccessfulCredentials">
+            一键复制成功账号密码
+          </el-button>
+          <el-button @click="downloadSuccessfulCredentials">
+            下载 TXT
+          </el-button>
+        </div>
+      </div>
+
       <div class="result-actions">
         <el-button type="primary" @click="router.push({name:'user'})">查看所有用户</el-button>
         <el-button @click="clearAll">继续导入下一批</el-button>
@@ -242,6 +257,101 @@ async function createAll() {
   }
 }
 
+
+function extractCredentialFromLine(rawLine) {
+  const line = String(rawLine || '').trim();
+  if (!line) return null;
+
+  let m = line.match(
+    /(?:账号|帳號|邮箱|郵箱|email|mail|username|user)\s*[:：]\s*([^\s|,;，；]+)\s*(?:\||｜|,|，|;|；|\t|\s{2,})\s*(?:密码|密碼|password|pwd|pass)\s*[:：]\s*(.+)$/i
+  );
+  if (m) return { email: m[1].trim(), password: m[2].trim() };
+
+  for (const sep of ['|', '｜', ',', '，', ';', '；', '\t']) {
+    const idx = line.indexOf(sep);
+    if (idx > 0) {
+      let left = line.slice(0, idx)
+        .replace(/^\s*(账号|帳號|邮箱|郵箱|email|mail|username|user)\s*[:：]\s*/i, '')
+        .trim();
+      let right = line.slice(idx + sep.length)
+        .replace(/^\s*(密码|密碼|password|pwd|pass)\s*[:：]\s*/i, '')
+        .trim();
+
+      if (left.includes('@') && right) {
+        return { email: left, password: right };
+      }
+    }
+  }
+
+  m = line.match(/^([^\s]+@[^\s]+)\s+(.+)$/);
+  if (m) return { email: m[1].trim(), password: m[2].trim() };
+
+  return null;
+}
+
+function successfulCredentialText() {
+  if (!resultData.value?.success?.length) return '';
+
+  const lines = rawText.value.split(/\r?\n/);
+  const successEmails = new Set(
+    resultData.value.success.map(item => String(item.email || '').toLowerCase())
+  );
+
+  const output = [];
+
+  for (const rawLine of lines) {
+    const item = extractCredentialFromLine(rawLine);
+    if (!item) continue;
+
+    if (successEmails.has(String(item.email).toLowerCase())) {
+      output.push(`账号: ${item.email} | 密码: ${item.password}`);
+    }
+  }
+
+  return output.join('\n');
+}
+
+async function copySuccessfulCredentials() {
+  const text = successfulCredentialText();
+  if (!text) {
+    ElMessage.warning('没有可复制的成功账号');
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    ElMessage.success(`已复制 ${resultData.value.successCount} 个成功账号密码`);
+  } catch {
+    // Clipboard API 在部分非 HTTPS/旧浏览器环境不可用，使用兼容方案。
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    ElMessage.success(`已复制 ${resultData.value.successCount} 个成功账号密码`);
+  }
+}
+
+function downloadSuccessfulCredentials() {
+  const text = successfulCredentialText();
+  if (!text) {
+    ElMessage.warning('没有可导出的成功账号');
+    return;
+  }
+
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `cloud-mail-success-${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+
 function clearAll() {
   rawText.value = '';
   previewData.value = null;
@@ -281,6 +391,17 @@ onMounted(loadRoles);
   gap: 8px;
 }
 .table { margin-top: 14px; }
+.credential-copy-box {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--el-fill-color-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.copy-title { font-weight: 600; margin-bottom: 4px; }
 .result-actions { margin-top: 16px; justify-content: flex-end; }
 @media (max-width: 760px) {
   .page-head, .toolbar {
@@ -288,5 +409,9 @@ onMounted(loadRoles);
     align-items: stretch;
   }
   .actions { justify-content: flex-end; }
+  .credential-copy-box {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

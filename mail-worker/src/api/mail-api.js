@@ -3,6 +3,7 @@ import result from '../model/result';
 import pushConfigService from '../service/push-config-service';
 import pushConst from '../const/push-const';
 import mailApiService from '../service/mail-api-service';
+import mailPasswordAuthService from '../service/mail-password-auth-service';
 import BizError from '../error/biz-error';
 
 export async function authMailApi(c) {
@@ -33,6 +34,58 @@ async function optionalJson(c) {
 	}
 }
 
+async function credentialParams(c) {
+	if (c.req.method === 'GET') {
+		return {
+			user: c.req.query('user') || c.req.query('email') || '',
+			pass: c.req.query('pass') || c.req.query('password') || '',
+			page: c.req.query('page'),
+			size: c.req.query('size'),
+			sort: c.req.query('sort')
+		};
+	}
+
+	const contentType = c.req.header('content-type') || '';
+
+	if (contentType.includes('application/json')) {
+		try {
+			const body = await c.req.json();
+			return {
+				user: body.user || body.email || '',
+				pass: body.pass || body.password || '',
+				page: body.page,
+				size: body.size,
+				sort: body.sort
+			};
+		} catch {
+			return {};
+		}
+	}
+
+	if (
+		contentType.includes('application/x-www-form-urlencoded') ||
+		contentType.includes('multipart/form-data')
+	) {
+		const body = await c.req.parseBody();
+		return {
+			user: body.user || body.email || '',
+			pass: body.pass || body.password || '',
+			page: body.page,
+			size: body.size,
+			sort: body.sort
+		};
+	}
+
+	// 允许 POST Content-Length: 0 + query 参数
+	return {
+		user: c.req.query('user') || c.req.query('email') || '',
+		pass: c.req.query('pass') || c.req.query('password') || '',
+		page: c.req.query('page'),
+		size: c.req.query('size'),
+		sort: c.req.query('sort')
+	};
+}
+
 async function unreadExtract(c, address) {
 	const config = await authMailApi(c);
 
@@ -54,14 +107,76 @@ async function unreadExtract(c, address) {
 	}));
 }
 
-// 高级列表查询
+// ----------------------------------------------------
+// 账号 + 密码取件 API
+// 不需要全局 x-api-key；只允许读取登录邮箱本身。
+// GET 为兼容使用，POST 更安全，推荐 POST。
+// ----------------------------------------------------
+
+async function passwordList(c) {
+	const params = await credentialParams(c);
+	const userRow = await mailPasswordAuthService.verify(
+		c,
+		params.user,
+		params.pass
+	);
+
+	const data = await mailApiService.mailbox(c, userRow.email, {
+		page: params.page || 1,
+		size: params.size || 20,
+		sort: params.sort || 'desc'
+	});
+
+	return c.json(result.ok({
+		mailbox: userRow.email,
+		count: data.length,
+		list: data
+	}));
+}
+
+app.get('/mail-api/auth/list', passwordList);
+app.post('/mail-api/auth/list', passwordList);
+
+async function passwordUnread(c) {
+	const params = await credentialParams(c);
+	const userRow = await mailPasswordAuthService.verify(
+		c,
+		params.user,
+		params.pass
+	);
+
+	const config = await pushConfigService.get(c);
+	if (!config.api?.unreadExtractEnabled) {
+		throw new BizError('Unread extraction disabled', 403);
+	}
+
+	const limit = Math.min(10, Math.max(1, Number(config.api?.unreadLimit) || 10));
+
+	const data = config.api?.markReadAfterExtract === false
+		? await mailApiService.unreadList(c, userRow.email, limit)
+		: await mailApiService.consumeUnread(c, userRow.email, limit);
+
+	return c.json(result.ok({
+		mailbox: userRow.email,
+		count: data.length,
+		markReadAfterExtract: config.api?.markReadAfterExtract !== false,
+		list: data
+	}));
+}
+
+app.get('/mail-api/auth/unread', passwordUnread);
+app.post('/mail-api/auth/unread', passwordUnread);
+
+// ----------------------------------------------------
+// 全局 API Key 接口（原有功能继续保留）
+// ----------------------------------------------------
+
 app.post('/mail-api/list', async (c) => {
 	await authMailApi(c);
 	const data = await mailApiService.list(c, await optionalJson(c));
 	return c.json(result.ok(data));
 });
 
-// 未读邮件消费接口：最多 10 条，由后台配置决定是否提取后标已读
 app.get('/mail-api/unread/:address', async (c) => {
 	return unreadExtract(c, c.req.param('address'));
 });
@@ -70,7 +185,6 @@ app.post('/mail-api/unread/:address', async (c) => {
 	return unreadExtract(c, c.req.param('address'));
 });
 
-// 明确 mailbox 路径
 app.get('/mail-api/mailbox/:address', async (c) => {
 	await authMailApi(c);
 	const data = await mailApiService.mailbox(c, c.req.param('address'), {
@@ -88,7 +202,6 @@ app.post('/mail-api/mailbox/:address', async (c) => {
 	return c.json(result.ok(data));
 });
 
-// 简写：邮箱地址直接作为 path
 app.get('/mail-api/:target', async (c) => {
 	await authMailApi(c);
 	const target = decodeURIComponent(c.req.param('target'));

@@ -1,17 +1,18 @@
 {
-  "version": "5",
-  "base": "cloud-mail-push-center-v4",
+  "version": "6",
+  "base": "cloud-mail-push-center-v5",
   "changes": [
-    "batch import moved from sidebar dialog to /batch-users full page",
-    "sidebar now only navigates to batch page",
-    "global Mail API key made explicit in UI",
-    "admin reveal/copy endpoint for complete global API key",
-    "same global key works for every mailbox"
+    "copy successful imported credentials",
+    "download successful credentials as TXT",
+    "mail API authenticated by mailbox email/password",
+    "GET and POST credential API",
+    "credential unread extraction",
+    "password attempt rate limiting"
   ],
-  "new_route": "/batch-users",
-  "global_api_key": {
-    "storage": "Cloudflare KV PUSH_CONFIG_V1.api.key",
-    "scope": "all mailboxes",
-    "per_user_key_required": false
+  "endpoints": {
+    "password_list_get": "/api/mail-api/auth/list?user=...&pass=...",
+    "password_list_post": "/api/mail-api/auth/list",
+    "password_unread_get": "/api/mail-api/auth/unread?user=...&pass=...",
+    "password_unread_post": "/api/mail-api/auth/unread"
   }
 }
